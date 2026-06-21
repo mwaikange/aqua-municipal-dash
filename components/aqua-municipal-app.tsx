@@ -168,9 +168,14 @@ export default function AquaMunicipalApp() {
 
     setLoadingLogin(true)
     setLoginError("")
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    const normalizedEmail = email.trim().toLowerCase()
+    const { data, error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password })
     if (error || !data.user) {
-      setLoginError(error?.message ?? "Login failed.")
+      const message =
+        error && "status" in error && error.status === 500
+          ? "Supabase Auth returned 500 unexpected_failure. Check Supabase Auth hooks/logs and confirm this user can sign in from the Supabase dashboard."
+          : error?.message ?? "Login failed."
+      setLoginError(message)
       setLoadingLogin(false)
       return
     }
