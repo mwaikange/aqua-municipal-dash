@@ -293,6 +293,25 @@ button {
   flex: 1;
   overflow: auto;
   padding: 18px 12px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+.sidebar nav::-webkit-scrollbar {
+  width: 5px;
+}
+
+.sidebar nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar nav::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.sidebar nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .nav-group {
@@ -319,7 +338,7 @@ button {
 
 .nav-item {
   width: 100%;
-  min-height: 40px;
+  min-height: 38px;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -328,7 +347,8 @@ button {
   border-radius: 7px;
   color: rgba(255, 255, 255, 0.9);
   background: transparent;
-  font-weight: 780;
+  font-size: 14px;
+  font-weight: 650;
   text-align: left;
 }
 
