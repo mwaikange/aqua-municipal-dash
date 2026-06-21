@@ -1,0 +1,12 @@
+node_modules/
+.next/
+out/
+dist/
+build/
+.env
+.env*.local
+.npm-cache/
+.pnpm-store/
+*.log
+Thumbs.db
+.DS_Store
