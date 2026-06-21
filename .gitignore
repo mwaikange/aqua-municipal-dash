@@ -8,5 +8,6 @@ build/
 .npm-cache/
 .pnpm-store/
 *.log
+*.tsbuildinfo
 Thumbs.db
 .DS_Store

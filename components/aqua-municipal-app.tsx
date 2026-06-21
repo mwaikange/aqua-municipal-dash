@@ -208,7 +208,9 @@ export default function AquaMunicipalApp() {
   if (booting) {
     return (
       <div className="preloader">
-        <div className="brand-mark">A</div>
+        <div className="brand-mark">
+          <img src="/utility-logo.png" alt="" />
+        </div>
         <div>
           <strong>Aqua Municipal</strong>
           <span>Preparing dashboard</span>
@@ -324,7 +326,7 @@ export default function AquaMunicipalApp() {
         {activeView === "redemptions" ? <RedemptionTable redemptions={redemptions} /> : null}
         {activeView === "kiosks" ? <KioskPanel kiosks={kiosks} /> : null}
         {activeView === "balances" ? <BalancePanel metrics={metrics} balance={balance} /> : null}
-        {activeView === "admins" && profile.role === "mua_super_admin" ? <AdminPanel admins={admins} /> : null}
+        {activeView === "admins" && profile.role === "mua_super_admin" ? <AdminPanel admins={admins} onCreated={() => loadDashboardData()} /> : null}
       </section>
     </main>
   )
@@ -333,7 +335,9 @@ export default function AquaMunicipalApp() {
 function Brand({ centered = false, size = "normal" }: { centered?: boolean; size?: "normal" | "large" }) {
   return (
     <div className={`brand ${centered ? "centered" : ""} ${size}`}>
-      <div className="brand-mark">A</div>
+      <div className="brand-mark">
+        <img src="/utility-logo.png" alt="" />
+      </div>
       <div>
         <h2>Aqua Municipal</h2>
         <p>Water token administration</p>
@@ -590,21 +594,126 @@ function BalancePanel({ metrics, balance }: { metrics: Metrics; balance: Distrib
   )
 }
 
-function AdminPanel({ admins }: { admins: AdminUser[] }) {
+function AdminPanel({ admins, onCreated }: { admins: AdminUser[]; onCreated: () => void }) {
+  const [fullName, setFullName] = useState("")
+  const [adminEmail, setAdminEmail] = useState("")
+  const [adminPassword, setAdminPassword] = useState("")
+  const [role, setRole] = useState<AdminRole>("municipal_admin")
+  const [municipality, setMunicipality] = useState("")
+  const [isCreating, setIsCreating] = useState(false)
+  const [message, setMessage] = useState("")
+
+  const createAdmin = async () => {
+    if (!supabase) return
+    setMessage("")
+
+    if (!fullName.trim() || !adminEmail.trim() || !adminPassword.trim()) {
+      setMessage("Enter name, email, and temporary password.")
+      return
+    }
+
+    if (role === "municipal_admin" && !municipality.trim()) {
+      setMessage("Municipal Admin users need a municipality.")
+      return
+    }
+
+    setIsCreating(true)
+    const { data } = await supabase.auth.getSession()
+    const token = data.session?.access_token
+
+    if (!token) {
+      setMessage("Your session expired. Log out and sign in again.")
+      setIsCreating(false)
+      return
+    }
+
+    const response = await fetch("/api/admin-users", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        fullName: fullName.trim(),
+        email: adminEmail.trim().toLowerCase(),
+        password: adminPassword,
+        role,
+        municipality: role === "municipal_admin" ? municipality.trim() : null,
+      }),
+    })
+
+    const result = await response.json()
+
+    if (!response.ok) {
+      setMessage(result.error ?? "Could not create admin user.")
+      setIsCreating(false)
+      return
+    }
+
+    setFullName("")
+    setAdminEmail("")
+    setAdminPassword("")
+    setRole("municipal_admin")
+    setMunicipality("")
+    setMessage("Admin user created.")
+    setIsCreating(false)
+    onCreated()
+  }
+
   return (
-    <Panel title="Admin Users" subtitle="Supabase Auth users registered for dashboard access">
-      <Table columns={["Name", "Email", "Role", "Municipality", "Status"]}>
-        {admins.map((admin) => (
-          <tr key={admin.id}>
-            <td>{admin.full_name ?? "Admin"}</td>
-            <td>{admin.email}</td>
-            <td>{roleLabels[admin.role]}</td>
-            <td>{admin.municipality ?? "All municipalities"}</td>
-            <td><Badge label={admin.status} tone={admin.status === "active" ? "ok" : "danger"} /></td>
-          </tr>
-        ))}
-      </Table>
-    </Panel>
+    <div className="admin-grid">
+      <Panel title="Create Admin User" subtitle="Creates Supabase Auth and dashboard access">
+        <div className="admin-form">
+          <label>
+            Full name
+            <input value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Jane Admin" />
+          </label>
+          <label>
+            Email
+            <input value={adminEmail} onChange={(event) => setAdminEmail(event.target.value)} type="email" placeholder="admin@municipality.na" />
+          </label>
+          <label>
+            Temporary password
+            <input value={adminPassword} onChange={(event) => setAdminPassword(event.target.value)} type="password" placeholder="Minimum 6 characters" />
+          </label>
+          <label>
+            Role
+            <select value={role} onChange={(event) => setRole(event.target.value as AdminRole)}>
+              <option value="municipal_admin">Municipal Admin</option>
+              <option value="mua_admin">MUA Admin</option>
+              <option value="mua_super_admin">MUA Super Admin</option>
+            </select>
+          </label>
+          <label>
+            Municipality
+            <input
+              value={municipality}
+              onChange={(event) => setMunicipality(event.target.value)}
+              placeholder={role === "municipal_admin" ? "Required" : "Optional"}
+              disabled={role !== "municipal_admin"}
+            />
+          </label>
+          <button className="primary-button admin-create-button" onClick={createAdmin} disabled={isCreating}>
+            {isCreating ? "Creating..." : "Create User"}
+          </button>
+          {message ? <p className="admin-form-message">{message}</p> : null}
+        </div>
+      </Panel>
+
+      <Panel title="Admin Users" subtitle="Supabase Auth users registered for dashboard access">
+        <Table columns={["Name", "Email", "Role", "Municipality", "Status"]}>
+          {admins.map((admin) => (
+            <tr key={admin.id}>
+              <td>{admin.full_name ?? "Admin"}</td>
+              <td>{admin.email}</td>
+              <td>{roleLabels[admin.role]}</td>
+              <td>{admin.municipality ?? "All municipalities"}</td>
+              <td><Badge label={admin.status} tone={admin.status === "active" ? "ok" : "danger"} /></td>
+            </tr>
+          ))}
+        </Table>
+      </Panel>
+    </div>
   )
 }
 
